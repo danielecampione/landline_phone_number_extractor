@@ -1,184 +1,154 @@
 package landline_phone_number_extractor;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javafx.animation.FadeTransition;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.effect.InnerShadow;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.util.Duration;
+import javafx.animation.ScaleTransition;
+import javafx.animation.ParallelTransition;
 
-public class LandlinePhoneNumberExtractor extends JFrame {
+public class LandlinePhoneNumberExtractor extends Application {
 
-    private static final long serialVersionUID = -2354799664365373469L;
-    
-    private JTextArea leftTextArea;
-    private JTextArea rightTextArea;
-    private JButton processButton;
-    
-    // Due radio buttons mutuamente esclusivi:
-    private JRadioButton ignoreRadioButton;
-    private JRadioButton onlyRadioButton;
+    private StyledTextArea inputTextArea;
+    private NeonTextArea outputTextArea;
+    private RadioButton ignoreRadioButton;
+    private RadioButton onlyRadioButton;
+    private final Duration animationDuration = Duration.millis(200);
+    private final double scaleFactor = 1.1;
 
-    public LandlinePhoneNumberExtractor() {
-        super("Landline Phone Number Extractor - Filtro Numeri Fissi");
-        initUI();
-    }
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Landline Phone Number Extractor - Filtro Numeri Fissi");
 
-    private void initUI() {
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(800, 600);
+        BorderPane root = new BorderPane();
+        root.setPadding(new Insets(15));
+        root.getStyleClass().add("root-pane");
 
-        leftTextArea = new JTextArea();
-        rightTextArea = new JTextArea();
-        rightTextArea.setEditable(false);
+        Label inputLabel = new Label("Testo da analizzare:");
+        Label outputLabel = new Label("Risultato:");
+        inputLabel.getStyleClass().add("label");
+        outputLabel.getStyleClass().add("label");
 
-        JScrollPane leftScrollPane = new JScrollPane(leftTextArea);
-        JScrollPane rightScrollPane = new JScrollPane(rightTextArea);
+        inputTextArea = new StyledTextArea();
+        inputTextArea.setPromptText("Incolla qui il testo contenente i numeri di telefono...");
+        inputTextArea.setOpacity(0);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftScrollPane, rightScrollPane);
-        splitPane.setResizeWeight(0.5);
+        outputTextArea = new NeonTextArea();
+        outputTextArea.setPromptText("I numeri filtrati appariranno qui...");
+        outputTextArea.setEditable(false);
+        outputTextArea.setOpacity(0);
+        
+        VBox.setVgrow(inputTextArea, Priority.ALWAYS);
+        VBox.setVgrow(outputTextArea, Priority.ALWAYS);
 
-        // Creazione dei radio buttons e del relativo ButtonGroup
-        ignoreRadioButton = new JRadioButton("Ignora numeri con prefisso 884 o 772");
-        onlyRadioButton   = new JRadioButton("Dammi solo numeri fissi con prefisso 884 o 772");
-        // Modalità di default: "Ignora"
+        VBox inputVBox = new VBox(5, inputLabel, inputTextArea);
+        VBox outputVBox = new VBox(5, outputLabel, outputTextArea);
+        
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(inputVBox, outputVBox);
+        splitPane.setDividerPositions(0.5);
+        SplitPane.setResizableWithParent(inputVBox, true);
+        SplitPane.setResizableWithParent(outputVBox, true);
+        root.setCenter(splitPane);
+
+        VBox controlsBox = new VBox(15);
+        controlsBox.setAlignment(Pos.CENTER);
+        controlsBox.setPadding(new Insets(15, 0, 10, 0));
+
+        Label choiceLabel = new Label("Scegli la modalità di filtro:");
+        choiceLabel.getStyleClass().add("choice-label");
+
+        ignoreRadioButton = new RadioButton("Ignora numeri con prefisso 884 o 772");
+        onlyRadioButton = new RadioButton("Dammi solo numeri fissi con prefisso 884 o 772");
         ignoreRadioButton.setSelected(true);
 
-        ButtonGroup group = new ButtonGroup();
-        group.add(ignoreRadioButton);
-        group.add(onlyRadioButton);
+        ToggleGroup choiceGroup = new ToggleGroup();
+        ignoreRadioButton.setToggleGroup(choiceGroup);
+        onlyRadioButton.setToggleGroup(choiceGroup);
 
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topPanel.add(ignoreRadioButton);
-        topPanel.add(onlyRadioButton);
+        HBox radioBox = new HBox(20, ignoreRadioButton, onlyRadioButton);
+        radioBox.setAlignment(Pos.CENTER);
 
-        processButton = new JButton("Elabora");
-        processButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                processNumbers();
-            }
+        StyledButton processButton = new StyledButton("Elabora");
+        processButton.setOnAction(e -> processInput());
+
+        controlsBox.getChildren().addAll(choiceLabel, radioBox, processButton);
+        root.setBottom(controlsBox);
+        
+        Scene scene = new Scene(root, 800, 600);
+        // Assicurati che il file styles.css sia nella stessa cartella dei file .class
+        scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        primaryStage.setScene(scene);
+        primaryStage.show();
+        
+        animateTextAreas();
+        // Applica l'effetto di hover ai radio button
+        applyHoverEffect(ignoreRadioButton);
+        applyHoverEffect(onlyRadioButton);
+    }
+    
+    private void animateTextAreas() {
+        FadeTransition fadeInInput = new FadeTransition(Duration.seconds(1), inputTextArea);
+        fadeInInput.setFromValue(0);
+        fadeInInput.setToValue(1);
+
+        FadeTransition fadeInOutput = new FadeTransition(Duration.seconds(1), outputTextArea);
+        fadeInOutput.setFromValue(0);
+        fadeInOutput.setToValue(1);
+        
+        ParallelTransition parallelTransition = new ParallelTransition(fadeInInput, fadeInOutput);
+        parallelTransition.play();
+    }
+    
+    // Metodo per l'effetto di ingrandimento
+    private void applyHoverEffect(Node node) {
+        node.setOnMouseEntered(e -> {
+            ScaleTransition st = (ScaleTransition) node.getProperties().get("scaleTransition");
+            if (st != null) st.stop();
+            st = new ScaleTransition(animationDuration, node);
+            st.setToX(scaleFactor);
+            st.setToY(scaleFactor);
+            st.play();
+            node.getProperties().put("scaleTransition", st);
         });
 
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(topPanel, BorderLayout.NORTH);
-        getContentPane().add(splitPane, BorderLayout.CENTER);
-        getContentPane().add(processButton, BorderLayout.SOUTH);
+        node.setOnMouseExited(e -> {
+            ScaleTransition st = (ScaleTransition) node.getProperties().get("scaleTransition");
+            if (st != null) st.stop();
+            st = new ScaleTransition(animationDuration, node);
+            st.setToX(1.0);
+            st.setToY(1.0);
+            st.play();
+            node.getProperties().put("scaleTransition", st);
+        });
     }
 
-    /**
-     * Verifica se un token (numero) soddisfa il criterio richiesto.
-     *
-     * La normalizzazione prevede:
-     * • Rimozione del prefisso internazionale "+39" o "39" se presente.
-     * • Se il token inizia con "02", viene considerato un fisso milanese: 
-     *   si rimuove l'area ("02") e, in modalità only, il token è valido
-     *   se dopo la rimozione inizia per "884" o "772", mentre in modalità ignore
-     *   il token è valido se **non** inizia per "884" o "772". Se dopo "02"
-     *   il token è vuoto, lo consideriamo non valido.
-     * • Se il token non inizia con "02" e la sua lunghezza è al massimo 6 cifre
-     *   lo trattiamo come interno: in modalità only è valido, in modalità ignore
-     *   lo filtriamo.
-     * • Altrimenti, il token (presumibilmente di cellulare o altro) viene escluso.
-     *
-     * @param token il token da analizzare.
-     * @param onlyMode true per la modalità "Dammi solo numeri fissi con prefisso 884 o 772"
-     *                 false per la modalità "Ignora numeri con prefisso 884 o 772".
-     * @return true se il token soddisfa i criteri richiesti per la modalità.
-     */
-    private boolean qualifies(String token, boolean onlyMode) {
-        token = token.trim();
-        if (token.startsWith("+39")) {
-            token = token.substring(3);
-        } else if (token.startsWith("39")) {
-            token = token.substring(2);
-        }
-        if (token.startsWith("02")) {
-            token = token.substring(2);
-            if (token.isEmpty()) {
-                return false;
-            }
-            if (onlyMode) {
-                return token.startsWith("884") || token.startsWith("772");
-            } else {
-                return !(token.startsWith("884") || token.startsWith("772"));
-            }
-        } else {
-            // Se il token è breve (massimo 6 cifre) lo trattiamo come interno.
-            if (token.length() <= 6) {
-                return onlyMode; // In modalità only, lo includiamo; altrimenti lo escludiamo.
-            } else {
-                // Token lungo e senza area -> non fisso.
-                return false;
-            }
-        }
-    }
-
-    private void processNumbers() {
-        String input = leftTextArea.getText();
-        String[] lines = input.split("\\r?\\n");
-        StringBuilder output = new StringBuilder();
-
-        // Determiniamo la modalità corrente:
-        // onlyMode == true se è selezionato "Dammi solo numeri fissi con prefisso 884 o 772"
+    private void processInput() {
+        String inputText = inputTextArea.getText();
         boolean onlyMode = onlyRadioButton.isSelected();
-
-        for (String line : lines) {
-            // Pulizia: manteniamo cifre, il segno +, separatori (-, /, \) e spazi.
-            String cleaned = line.replaceAll("[^\\d+\\-\\/\\\\\\s]", "").trim();
-
-            // Se la riga è vuota o contiene solo "+39" o "39", restituiamo una riga vuota.
-            if (cleaned.isEmpty() || cleaned.equals("+39") || cleaned.equals("39")) {
-                output.append("\n");
-                continue;
-            }
-
-            // Suddividiamo la riga in token utilizzando come delimitatori spazio, trattino, slash o backslash.
-            String[] tokens = cleaned.split("[\\s\\-\\/\\\\]+");
-
-            if (onlyMode) {
-                // Modalità "Dammi solo numeri fissi con prefisso 884 o 772":
-                // Elaboriamo i singoli token e creiamo una nuova riga composta SOLO dai token validi.
-                StringBuilder validTokens = new StringBuilder();
-                for (String token : tokens) {
-                    if (qualifies(token, true)) {
-                        if (validTokens.length() > 0) {
-                            validTokens.append(" ");
-                        }
-                        validTokens.append(token);
-                    }
-                }
-                // Se almeno un token risulta valido, restituiamo la riga composta da questi token;
-                // altrimenti, la riga viene filtrata.
-                if (validTokens.length() > 0) {
-                    output.append(validTokens.toString()).append("\n");
-                } else {
-                    output.append("\n");
-                }
-            } else {
-                // Modalità "Ignora numeri con prefisso 884 o 772":
-                // La riga viene restituita SOLO se tutti i token soddisfano il criterio;
-                // altrimenti la filtriamo (restituiamo una riga vuota).
-                boolean allQualify = true;
-                for (String token : tokens) {
-                    if (!qualifies(token, false)) {
-                        allQualify = false;
-                        break;
-                    }
-                }
-                if (allQualify) {
-                    output.append(line).append("\n");
-                } else {
-                    output.append("\n");
-                }
-            }
-        }
-        rightTextArea.setText(output.toString());
+        
+        String result = PhoneNumberLogic.processText(inputText, onlyMode);
+        
+        outputTextArea.setText(result);
+        
+        // Attiva il focus per mostrare l'effetto "neon" definito nel CSS
+        outputTextArea.requestFocus(); 
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new LandlinePhoneNumberExtractor().setVisible(true);
-            }
-        });
+        launch(args);
     }
 }
