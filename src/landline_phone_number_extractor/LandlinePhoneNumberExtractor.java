@@ -1,6 +1,15 @@
 package landline_phone_number_extractor;
 
 import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.ParallelTransition;
+import javafx.animation.RotateTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.Timeline;
+
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -28,10 +37,12 @@ public class LandlinePhoneNumberExtractor extends Application {
     private RadioButton onlyRadioButton;
     private final Duration animationDuration = Duration.millis(200);
     private final double scaleFactor = 1.1;
+    private Stage primaryStage; // Memorizza lo Stage principale
 
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("Landline Phone Number Extractor - Filtro Numeri Fissi");
+    	this.primaryStage = primaryStage;
+    	primaryStage.setTitle("Landline Phone Number Extractor - Filtro Numeri Fissi");
 
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(15));
@@ -95,6 +106,12 @@ public class LandlinePhoneNumberExtractor extends Application {
         primaryStage.show();
         
         animateTextAreas();
+        
+        primaryStage.setOnCloseRequest(event -> {
+            event.consume();
+            startCloseAnimation();
+        });
+        
         // Applica l'effetto di hover ai radio button
         applyHoverEffect(ignoreRadioButton);
         applyHoverEffect(onlyRadioButton);
@@ -136,6 +153,41 @@ public class LandlinePhoneNumberExtractor extends Application {
         });
     }
 
+    private void startCloseAnimation() {
+        // Animazione di rotazione
+        RotateTransition rotateTransition = new RotateTransition(Duration.seconds(1.5),
+                primaryStage.getScene().getRoot());
+        rotateTransition.setByAngle(360);
+        rotateTransition.setInterpolator(Interpolator.EASE_BOTH);
+
+        // Animazione di allontanamento (riduzione della scala)
+        ScaleTransition scaleTransition = new ScaleTransition(Duration.seconds(1.5), primaryStage.getScene().getRoot());
+        scaleTransition.setToX(0.1);
+        scaleTransition.setToY(0.1);
+        scaleTransition.setInterpolator(Interpolator.EASE_BOTH);
+
+        // Animazione di dissolvenza verso il bianco
+        FadeTransition fadeTransition = new FadeTransition(Duration.seconds(1.5), primaryStage.getScene().getRoot());
+        fadeTransition.setToValue(0.0);
+        fadeTransition.setInterpolator(Interpolator.EASE_BOTH);
+
+        // Animazione del colore di sfondo verso il bianco
+        Timeline backgroundColorTimeline = new Timeline(
+                new KeyFrame(Duration.ZERO,
+                        new KeyValue(primaryStage.getScene().getRoot().styleProperty(),
+                                "-fx-background-color: white;")),
+                new KeyFrame(Duration.seconds(1.5), new KeyValue(primaryStage.getScene().getRoot().styleProperty(),
+                        "-fx-background-color: white;")));
+
+        // Esegui tutte le animazioni in parallelo
+        ParallelTransition parallelTransition = new ParallelTransition(rotateTransition, scaleTransition,
+                fadeTransition, backgroundColorTimeline);
+        parallelTransition.setOnFinished(event -> {
+            primaryStage.close();
+        });
+        parallelTransition.play();
+    }
+    
     private void processInput() {
         String inputText = inputTextArea.getText();
         boolean onlyMode = onlyRadioButton.isSelected();
