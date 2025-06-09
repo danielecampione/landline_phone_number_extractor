@@ -9,12 +9,18 @@ import javafx.animation.RotateTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+//Importa TranslateTransition
+import javafx.animation.TranslateTransition;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox; // Importa CheckBox
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.SplitPane;
@@ -35,6 +41,9 @@ public class LandlinePhoneNumberExtractor extends Application {
     private NeonTextArea outputTextArea;
     private RadioButton ignoreRadioButton;
     private RadioButton onlyRadioButton;
+    private StyledButton processButton;
+    private CheckBox effettiSpecialiCheckBox; // Dichiarazione della CheckBox
+    private Label outputLabel;
     private final Duration animationDuration = Duration.millis(200);
     private final double scaleFactor = 1.1;
     private Stage primaryStage; // Memorizza lo Stage principale
@@ -49,7 +58,7 @@ public class LandlinePhoneNumberExtractor extends Application {
         root.getStyleClass().add("root-pane");
 
         Label inputLabel = new Label("Testo da analizzare:");
-        Label outputLabel = new Label("Risultato:");
+        outputLabel = new Label("Risultato:");
         inputLabel.getStyleClass().add("label");
         outputLabel.getStyleClass().add("label");
 
@@ -93,10 +102,14 @@ public class LandlinePhoneNumberExtractor extends Application {
         HBox radioBox = new HBox(20, ignoreRadioButton, onlyRadioButton);
         radioBox.setAlignment(Pos.CENTER);
 
-        StyledButton processButton = new StyledButton("Elabora");
+        // Crea la CheckBox per gli effetti speciali
+        effettiSpecialiCheckBox = new CheckBox("Attiva effetti speciali");
+        effettiSpecialiCheckBox.setSelected(false); // Di default, la checkbox è disattivata
+        
+        processButton = new StyledButton("Elabora");
         processButton.setOnAction(e -> processInput());
 
-        controlsBox.getChildren().addAll(choiceLabel, radioBox, processButton);
+        controlsBox.getChildren().addAll(choiceLabel, radioBox, effettiSpecialiCheckBox, processButton);
         root.setBottom(controlsBox);
         
         Scene scene = new Scene(root, 800, 600);
@@ -115,6 +128,7 @@ public class LandlinePhoneNumberExtractor extends Application {
         // Applica l'effetto di hover ai radio button
         applyHoverEffect(ignoreRadioButton);
         applyHoverEffect(onlyRadioButton);
+        applyHoverEffect(effettiSpecialiCheckBox);
     }
     
     private void animateTextAreas() {
@@ -191,6 +205,61 @@ public class LandlinePhoneNumberExtractor extends Application {
     private void processInput() {
         String inputText = inputTextArea.getText();
         boolean onlyMode = onlyRadioButton.isSelected();
+        
+        // Se la checkbox è selezionata, esegui l'animazione sul pulsante E SULLA LABEL
+        if (effettiSpecialiCheckBox.isSelected()) {
+        	// 1. Rotazione del pulsante "Elabora"
+            RotateTransition rotateButton = new RotateTransition(Duration.seconds(2), processButton);
+            rotateButton.setByAngle(720);
+            rotateButton.setInterpolator(Interpolator.EASE_BOTH);
+            rotateButton.play();
+
+            // 2. Animazione della label di destra (outputLabel)
+            final Duration animationDurationLabel = Duration.seconds(2);
+            final Font initialFont = Font.getDefault();
+            final Color initialColor = Color.BLACK;
+
+            Timeline labelTimeline = new Timeline(
+                    new KeyFrame(Duration.ZERO, new KeyValue(outputLabel.textFillProperty(), initialColor),
+                            new KeyValue(outputLabel.scaleXProperty(), 0), // Inizia da scala 0
+                            new KeyValue(outputLabel.scaleYProperty(), 0),
+                            new KeyValue(outputLabel.translateXProperty(), 100), // Inizia da 100 a destra
+                            new KeyValue(outputLabel.fontProperty(),
+                                    Font.font(initialFont.getFamily(), FontWeight.BOLD, initialFont.getSize())),
+                            new KeyValue(outputLabel.opacityProperty(), 0)),
+                    new KeyFrame(Duration.seconds(0.5), new KeyValue(outputLabel.opacityProperty(), 1),
+                            new KeyValue(outputLabel.textFillProperty(), Color.DARKGRAY),
+                            new KeyValue(outputLabel.scaleXProperty(), 1.2),
+                            new KeyValue(outputLabel.scaleYProperty(), 1.2),
+                            new KeyValue(outputLabel.translateXProperty(), 0)), // Si muove a 0
+                    new KeyFrame(Duration.seconds(1.0), new KeyValue(outputLabel.opacityProperty(), 0)),
+                    new KeyFrame(Duration.seconds(1.5), new KeyValue(outputLabel.opacityProperty(), 0)),
+                    new KeyFrame(animationDurationLabel, new KeyValue(outputLabel.textFillProperty(), initialColor),
+                            new KeyValue(outputLabel.fontProperty(), initialFont),
+                            new KeyValue(outputLabel.scaleXProperty(), 1),
+                            new KeyValue(outputLabel.scaleYProperty(), 1),
+                            new KeyValue(outputLabel.translateXProperty(), 0),
+                            new KeyValue(outputLabel.opacityProperty(), 1)));
+            labelTimeline.play();
+
+            // Animazione combinata per outputTextArea: Fade, Scala e Traslazione
+            FadeTransition fadeInOutput = new FadeTransition(Duration.seconds(1), outputTextArea);
+            fadeInOutput.setFromValue(0);
+            fadeInOutput.setToValue(1);
+
+            ScaleTransition scaleOutput = new ScaleTransition(Duration.seconds(1), outputTextArea);
+            scaleOutput.setFromX(0.8); // Inizia da una scala ridotta
+            scaleOutput.setFromY(0.8);
+            scaleOutput.setToX(1);
+            scaleOutput.setToY(1);
+
+            TranslateTransition translateOutput = new TranslateTransition(Duration.seconds(1), outputTextArea);
+            translateOutput.setFromX(50); // Inizia da 50 pixel a destra
+            translateOutput.setToX(0);
+
+            ParallelTransition parallelTransition = new ParallelTransition(fadeInOutput, scaleOutput, translateOutput);
+            parallelTransition.play();
+        }
         
         String result = PhoneNumberLogic.processText(inputText, onlyMode);
         
